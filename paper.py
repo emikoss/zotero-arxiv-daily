@@ -100,22 +100,25 @@ class ArxivPaper:
             #read all tex files
             file_contents = {}
             for t in tex_files:
-                f = tar.extractfile(t)
-                content = f.read().decode('utf-8')
-                #remove comments
-                content = re.sub(r'%.*\n', '\n', content)
-                content = re.sub(r'\\begin{comment}.*?\\end{comment}', '', content, flags=re.DOTALL)
-                content = re.sub(r'\\iffalse.*?\\fi', '', content, flags=re.DOTALL)
-                #remove redundant \n
-                content = re.sub(r'\n+', '\n', content)
-                content = re.sub(r'\\\\', '', content)
-                #remove consecutive spaces
-                content = re.sub(r'[ \t\r\f]{3,}', ' ', content)
-                if main_tex is None and re.search(r'\\begin\{document\}', content):
-                    main_tex = t
-                    logger.debug(f"Choose {t} as main tex file of {self.arxiv_id}")
-                file_contents[t] = content
-            
+                try:
+                    f = tar.extractfile(t)
+                    content = f.read().decode('utf-8')  # 尝试用 UTF-8 解码
+                    # 移除注释
+                    content = re.sub(r'%.*\n', '\n', content)
+                    content = re.sub(r'\\begin{comment}.*?\\end{comment}', '', content, flags=re.DOTALL)
+                    content = re.sub(r'\\iffalse.*?\\fi', '', content, flags=re.DOTALL)
+                    # 移除多余的换行符
+                    content = re.sub(r'\n+', '\n', content)
+                    content = re.sub(r'\\\\', '', content)
+                    # 移除连续空格
+                    content = re.sub(r'[ \t\r\f]{3,}', ' ', content)
+                    if main_tex is None and re.search(r'\\begin\{document\}', content):
+                        main_tex = t
+                        logger.debug(f"Choose {t} as main tex file of {self.arxiv_id}")
+                    file_contents[t] = content  # 保存解析后的内容
+                except UnicodeDecodeError as e:
+                    logger.warning(f"Skipping file {t} due to decoding error: {e}")
+                    continue  # 跳过当前文件并继续处理其他文件
             if main_tex is not None:
                 main_source:str = file_contents[main_tex]
                 #find and replace all included sub-files
